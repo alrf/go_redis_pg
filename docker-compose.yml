@@ -1,0 +1,51 @@
+version: "2.2"
+
+services:
+
+  go:
+    container_name: go
+    image: alrf/go-redis-pg:latest
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      pg:
+        condition: service_healthy
+    links:
+      - pg
+      - redis
+
+  pg:
+    container_name: pg
+    image: postgres:11
+    restart: always
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./data/pg:/var/lib/postgresql/data
+    depends_on:
+      - redis
+  
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: always
+    volumes:
+      - ./data/redis:/data
+
+  jenkins:
+    container_name: jenkins
+    build:
+      context: ./services/jenkins
+    restart: always
+    ports:
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
